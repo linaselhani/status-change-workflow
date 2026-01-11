@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="generator" content="GitLab Pages">
+        <title>Data Entry</title>
+        <link rel="stylesheet" href="DEStyle.css">
+    </head>
+    <body>
+        <div class="navbar">
+            <a href="index.html">Home Page</a>
+            <a href="review.html">Review</a>
+            <a href="approval.html">Approval</a>
+        </div>
+        <h1>Data Entry</h1>
+
+        <div class="user">
+            <img src="default-profile.png" width="200" height="200">
+            <div class="user-info">
+                <h3>User: <u>Username</u></h3>
+                <h3>Role: <u>Data Entry</u></h3>
+            </div>
+
+        </div>
+
+        <div class="req-form">
+            <h2>Status Change Request Form</h2>
+            <button type="button" class = "new-form" id="new-form-button" onclick="openForm()">New Form</button>
+
+            <div class="form-fields" id = "actual-form">
+                <form id = "external-form"></form>
+
+                <form id="internal-form">
+                    <label for="fName" class="required">First Name:</label>
+                    <input form="external-form" type="text" fName = "fName" id = "fName" name = "fName" class = "required-field">
+
+                    <label for="current-status" class="required">Current Status:</label>
+                    <select class = "status-type" form="external-form" type="text" curStatus="current-status" id = "curStatus" name = "curStatus" class = "required-field">
+                        <option disabled selected hidden>Select Status</option>
+                        <option value = "Student-Visa">Student Visa</option>
+                        <option value = "Work-Visa">Work Visa</option>
+                        <option value = "Tourist-Visa">Immigrant/Tourist Visa</option> 
+                        <option value = "Green-Card">Green Card</option>
+                        <option value = "Citizen">Citizen</option>
+                        <option value = "Other">Other</option>
+                    </select>
+
+                    <label class = "deps" for="dependents">Dependents(if any listed):</label>
+                    <textarea class = "deps-text" form="external-form" type="text" dependents = "dependents" name = "dependents" placeholder="Enter the IDs of all Dependents..."></textarea>
+                    <small class = "deps-format">*Separate each dependent ID with a comma.</small>
+
+                    <div class="button-group">
+                        <button type="button" class="submit" onclick="submitDE()">Submit</button>
+                        <br>
+                        <button type="button" class="cancel" onclick="cancel()">Cancel</button>
+                    </div>
+                    
+                    <br>
+                    
+                    <label for="fName" class="required">Last Name:</label>
+                    <input form="external-form" type="text" lName = "lName" class="required" id = "lName" name = "lName" class = "required-field">
+
+                    <label for="requested-status" class="required">Requested Status:</label>
+                    <select class = "status-type" form="external-form" type="text" reqStatus="requested-status" id = "reqStatus" name = "reqStatus" class = "required-field">
+                        <option disabled selected hidden>Select Status</option>
+                        <option value = "Student-Visa">Student Visa</option>
+                        <option value = "Work-Visa">Work Visa</option>
+                        <option value = "Tourist-Visa">Immigrant/Tourist Visa</option> 
+                        <option value = "Green-Card">Green Card</option>
+                        <option value = "Citizen">Citizen</option>
+                        <option value = "Other">Other</option>
+                    </select>
+
+                    <br>
+                    
+                    <label for="dob" class="required">Date of Birth:</label>
+                    <input id = "dob" form="external-form" type="date" dob = "dob" name = "dob" class = "required-field">
+
+                </form>
+            </div>
+        </div>
+
+        <!-- <div class = "notifications">
+            <h2>Messages</h2>
+        </div> -->
+        
+        <script>
+            function openForm(){
+                document.getElementById('new-form-button').style.display = 'none';
+                document.getElementById('actual-form').style.display = 'block';
+            }
+
+
+            function submitDE(){
+                const required_fields = document.querySelectorAll('.required-field');
+                for(let i = 0; i < required_fields.length; i++){
+                    if(required_fields[i].value.trim() === '' || (required_fields[i].tagName === "select" && required_fields[i].selectedIndex === 0)) {
+                        alert('Missing Information. Please fill out required field(s) before submitting form.');
+                        return;
+                    }
+
+                }
+
+                const fName = document.querySelector("#fName").value;
+                const lName = document.querySelector("#lName").value;
+                const dob = document.querySelector("#dob").value;
+                const currStatus = document.querySelector("#curStatus").value; 
+                const reqStatus = document.querySelector("#reqStatus").value; 
+                const deps = document.querySelector(".deps-text").value;
+
+                const params = new URLSearchParams();
+                params.append("fname", fname);
+                params.append("lname", lname);
+                params.append("dob", dob);
+                params.append("curStatus", currStatus);
+                params.append("reqStatus", reqStatus);
+                params.append("deps", deps);
+
+                fetch("DataEntryServlet", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: params.toString()
+                }).catch(error =>{
+                    alert('ERROR OCCURRED. entry.html is unable to fetch to DataEntryServlet');
+                    return;
+                });
+
+                alert("Successfully submitted form.");
+            }
+
+            function cancel(){
+                document.getElementById('external-form').reset();
+                
+                const selectElements = document.querySelectorAll('select');
+                selectElements.forEach(select => {select.selectedIndex = 0;});
+
+                document.getElementById('actual-form').style.display = 'none';
+                document.getElementById('new-form-button').style.display = 'block';
+                // document.getElementById('internal-form').reset();
+            }
+        </script>
+
+    </body>
+</html>

@@ -1,0 +1,204 @@
+/* All elements in approval.html */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+/* -------- nav bar --------*/
+.navbar {
+    background: #2c5282;
+    padding: 10px 20px;
+    display: flex;
+    gap: 16px;
+}
+
+.navbar a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.navbar a:hover {
+    text-decoration: underline;
+}
+/* ------------------------------- */
+.header {
+    background: #f8f9fa;
+    padding: 20px 30px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 20px;
+    padding: 30px;
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* card components */
+.card {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: white;
+    height: 100%;
+}
+
+.card-header {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.card-body {
+    padding: 20px;
+    background: white;
+}
+
+.applicant-info {
+    height: calc(100% - 46px);
+}
+
+.notes-section {
+    background: white;
+}
+
+.notes-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.notes-subtitle {
+    font-size: 12px;
+    font-weight: normal;
+    margin-bottom: 12px;
+}
+
+.notes-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.notes-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.btn-save {
+    background: rgb(173, 170, 170);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* status change decison section */
+.decision-section {
+    padding: 20px;
+}
+
+.decision-header {
+    font-weight: 600;
+    color: #333;
+    font-size: 15px;
+    margin-bottom: 16px;
+}
+
+.decision-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.btn-return {
+    flex: 1 1 50%;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.btn-approve {
+    flex: 1 1 50%;
+    padding: 10px;
+    background: #486e9c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+@media (max-width: 968px) {
+    .content {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="generator" content="GitLab Pages">
+    <title>Status Change Approval</title>
+    <link rel="stylesheet" href="approvalStyle.css">
+</head>
+
+
+<body>
+
+
+    <div class="navbar">
+
+        <a href="index.html">Home Page</a>
+        <a href="entry.html">Data Entry</a>
+        <a href="review.html">Review</a>
+      
+    </div>
+
+    <div class="header">
+        <div>
+            <h1 class="header-title">Immigration Status Change Approval</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn">Cancel</button>
+            <button class="btn">Save</button>
+        </div>
+    </div>
+
+    <!-- Applicant Information Component -->
+    <div class="content">
+        <div class="left-panel">
+            <div class="card">
+                <div class="card-header">Applicant Information</div>
+                <div class="card-body applicant-info">
+
+                    <!-- ======= Form info goes here from DB ======= -->
+
+                </div>
+            </div>
+        </div>
+
+    <!-- ======= Info (decision stuff) here gets sent to servlet ======= -->
+
+        <div class="right-panel">
+
+            <!-- post used to send form data from the browser to the servlet  -->
+            <form method ="post" action="approval">
+
+                
+                <input type="hidden" name="formId" value="">
+
+            <!-- Status Change Request Component  -->
+            <div class="card">
+                <div class="card-header">Status Change Request</div>
+                <div class="card-body">
+                </div>
+            </div>
+
+            <!-- Reviewers Notes Component -->
+            <div class="card">
+                <div class="card-body notes-section">
+                    <div class="notes-header">
+                        <strong>Reviewer Notes</strong>
+                    </div>
+
+                    <div class="notes-subtitle">Add notes about approval decision</div>
+                        <!-- name="notes" for servlet  -->
+                        <textarea class="notes-textarea"
+                                  name="notes"
+                                  placeholder="Enter your notes here..."></textarea>
+                        <div class="notes-actions">
+                            <button class="btn-save" type="button">Save</button>
+                        </div>
+                    </div>
+                </div>
+
+            <!-- Status Change Decision Component  -->
+            <div class="card">
+                <div class="decision-section">
+                    <div class="decision-header">Status Change Decision</div>
+                    <!-- Buttons -->    
+                    <div class="decision-buttons">
+                        <button class="btn-return"
+                                type="submit"
+                                name="decision"
+                                value="returnReview">
+                            Return for Review
+                        </button>
+                            <!-- Approve: sends decision=approve -->
+                        <button class="btn-approve"
+                                type="submit"
+                                name="decision"
+                                value="approve">
+                            Approve
+                        </button>
+                        
+                    </div>
+                </div>
+            </div>
+            
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Load form data when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            loadFormData();
+        });
+
+        function loadFormData() {
+            fetch('approval', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.formId) {
+                    // Populate form ID
+                    document.querySelector('input[name="formId"]').value = data.formId;
+                    
+                    // Populate applicant information
+                    const applicantInfo = document.querySelector('.applicant-info');
+                    applicantInfo.innerHTML = `
+                        <div style="margin-bottom: 10px;">
+                            <strong>Form ID:</strong> ${data.formId}
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Immigrant ID:</strong> ${data.immId}
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Current Status:</strong> ${data.curStatus}
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>Requested Status:</strong> ${data.reqStatus}
+                        </div>
+                    `;
+                    
+                    // Populate status change request section - select the 2nd card-body
+                    const allCardBodies = document.querySelectorAll('.card-body');
+                    if (allCardBodies.length > 0) {
+                        // First card-body (index 0) is applicant-info, second (index 1) is status change
+                        allCardBodies[0].nextElementSibling.parentElement.querySelector('.card-body').innerHTML = `
+                            <div style="padding: 10px;">
+                                <strong>Status Change:</strong> ${data.curStatus} → ${data.reqStatus}
+                            </div>
+                        `;
+                    }
+                } else if (data.message) {
+                    alert(data.message);
+                } else if (data.error) {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching form data:', error);
+                alert('ERROR OCCURRED. Unable to fetch form data from ApprovalServlet');
+            });
+        }
+
+        // Handle form submission
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const decision = formData.get('decision');
+            
+            if (confirm(`Are you sure you want to ${decision === 'approve' ? 'approve' : 'return for review'} this form?`)) {
+                fetch('approval', {
+                    method: 'POST',
+                    body: new URLSearchParams(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        // Reload to get next form
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error occurred'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting form:', error);
+                    alert('ERROR OCCURRED. Unable to submit decision to ApprovalServlet');
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>
