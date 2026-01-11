@@ -1,0 +1,64 @@
+stages:
+  - build
+  - test
+  - sast
+
+variables:
+  MAVEN_OPTS: "-Xmx1024m"
+
+# ----------------------
+# Build Job
+# ----------------------
+build_job:
+  stage: build
+  tags:
+    - windows
+  script:
+    - echo "Building Java project..."
+    - cd status-change-req-domain
+    - mvn clean package -DskipTests=true
+  artifacts:
+    paths:
+      - status-change-req-domain/target/
+
+# ----------------------
+# Test Job
+# ----------------------
+test_job:
+  stage: test
+  tags:
+    - windows
+  dependencies:
+    - build_job
+  script:
+    - echo "Running tests..."
+    - cd status-change-req-domain
+    - mvn test
+  artifacts:
+    paths:
+      - status-change-req-domain/target/
+
+# ----------------------
+# SAST Job
+# ----------------------
+sast_job:
+  stage: sast
+  tags:
+    - windows
+  dependencies:
+    - build_job
+  script:
+    - echo "Running SpotBugs static analysis..."
+    - cd status-change-req-domain
+    
+    # Run SpotBugs via Maven
+    - mvn com.github.spotbugs:spotbugs-maven-plugin:4.9.8.1:spotbugs
+
+    # Convert SpotBugs XML to SARIF for GitLab SAST
+    - powershell -ExecutionPolicy Bypass -File ./spotbugs2sarif.ps1 target/spotbugsXml.xml gl-sast-report.json
+    
+  artifacts:
+    reports:
+      sast: status-change-req-domain/gl-sast-report.json
+    paths:
+      - status-change-req-domain/gl-sast-report.json
