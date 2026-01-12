@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Status Change Request</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .application-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            width: 150px;
+            color: #555;
+        }
+        .info-value {
+            flex: 1;
+            color: #333;
+        }
+        .comments-section {
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 80px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            margin-top: 30px;
+            text-align: center;
+        }
+        button {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .approve {
+            background-color: #28a745;
+            color: white;
+        }
+        .return {
+            background-color: #ffc107;
+            color: black;
+        }
+        .save-draft {
+            background-color: #6c757d;
+            color: white;
+        }
+        .documents-section {
+            margin: 20px 0;
+        }
+        .document-list {
+            list-style: none;
+            padding: 0;
+        }
+        .document-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        .document-actions {
+            margin-left: auto;
+        }
+        .document-actions button {
+            padding: 4px 8px;
+            margin-left: 5px;
+            font-size: 12px;
+        }
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        .edit-section {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .upload-section {
+            background: #d1ecf1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .upload-area {
+            border: 2px dashed #17a2b8;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            background: #f8f9fa;
+        }
+        .uploaded-files {
+            margin-top: 15px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .remove-file {
+            color: red;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Review Status Change Request</h1>
+        
+        <!-- Application Information (Read-only) -->
+        <div class="application-info">
+            <h3>Application Summary</h3>
+            <div class="info-row">
+                <div class="info-label">Applicant Name:</div>
+                <div class="info-value">John Doe</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Applicant ID:</div>
+                <div class="info-value">A123456789</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Current Status:</div>
+                <div class="info-value">Tourist Visa (B-2)</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Requested Status:</div>
+                <div class="info-value">Student Visa (F-1)</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Date Submitted:</div>
+                <div class="info-value">2024-01-15</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Case ID:</div>
+                <div class="info-value">CASE-001</div>
+            </div>
+        </div>
+
+        <!-- EDIT APPLICANT INFO SECTION -->
+        <div class="edit-section">
+            <h3>Edit Applicant Information</h3>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editFullName">Full Name:</label>
+                    <input type="text" id="editFullName" name="fullName" value="John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="editApplicantID">Applicant ID:</label>
+                    <input type="text" id="editApplicantID" name="applicantID" value="A123456789">
+                </div>
+                <div class="form-group">
+                    <label for="editCurrentStatus">Current Status:</label>
+                    <select id="editCurrentStatus" name="currentStatus">
+                        <option value="Tourist Visa (B-2)" selected>Tourist Visa (B-2)</option>
+                        <option value="Student Visa (F-1)">Student Visa (F-1)</option>
+                        <option value="Work Visa (H-1B)">Work Visa (H-1B)</option>
+                        <option value="Permanent Resident">Permanent Resident</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editRequestedStatus">Requested Status:</label>
+                    <select id="editRequestedStatus" name="requestedStatus">
+                        <option value="Tourist Visa (B-2)">Tourist Visa (B-2)</option>
+                        <option value="Student Visa (F-1)" selected>Student Visa (F-1)</option>
+                        <option value="Work Visa (H-1B)">Work Visa (H-1B)</option>
+                        <option value="Permanent Resident">Permanent Resident</option>
+                    </select>
+                </div>
+                <button type="button" onclick="saveEdits()" style="background-color: #007bff; color: white;">Save Changes</button>
+            </form>
+        </div>
+
+        <!-- UPLOAD DOCUMENTS SECTION -->
+        <div class="upload-section">
+            <h3>Upload Additional Documents</h3>
+            <div class="upload-area">
+                <input type="file" id="fileUpload" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                <p>Drag and drop files here or click to browse</p>
+                <p><small>Supported formats: PDF, JPG, PNG, DOC (Max 10MB per file)</small></p>
+            </div>
+            <div class="uploaded-files" id="uploadedFilesList">
+                <!-- Newly uploaded files will appear here -->
+            </div>
+            <button type="button" onclick="uploadDocuments()" style="background-color: #17a2b8; color: white;">Upload Selected Files</button>
+        </div>
+
+        <!-- Existing Documents Section -->
+        <div class="documents-section">
+            <h3>Uploaded Documents</h3>
+            <ul class="document-list">
+                <li class="document-item">
+                    <span>📄 Passport.pdf (2.1 MB)</span>
+                    <div class="document-actions">
+                        <button onclick="viewDocument('passport.pdf')">View</button>
+                        <button onclick="removeDocument('passport.pdf')" style="background-color: #dc3545; color: white;">Remove</button>
+                    </div>
+                </li>
+                <li class="document-item">
+                    <span>📄 I-20_Form.pdf (1.5 MB)</span>
+                    <div class="document-actions">
+                        <button onclick="viewDocument('i20.pdf')">View</button>
+                        <button onclick="removeDocument('i20.pdf')" style="background-color: #dc3545; color: white;">Remove</button>
+                    </div>
+                </li>
+                <li class="document-item">
+                    <span>📄 Financial_Statement.jpg (3.2 MB)</span>
+                    <div class="document-actions">
+                        <button onclick="viewDocument('financial.jpg')">View</button>
+                        <button onclick="removeDocument('financial.jpg')" style="background-color: #dc3545; color: white;">Remove</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Reviewer Comments -->
+        <div class="comments-section">
+            <label for="comments" class="required">Reviewer Comments</label>
+            <textarea id="comments" name="comments" placeholder="Enter comments for the applicant or data entry user..."></textarea>
+            <small>Required when returning for corrections</small>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <button type="button" class="save-draft" onclick="saveDraft()">Save Draft</button>
+            <button type="button" class="return" onclick="returnForCorrections()">Return for Corrections</button>
+            <button type="button" class="approve" onclick="approveRequest()">Approve</button>
+        </div>
+    </div>
+
+    <script>
+        // Store for uploaded files
+        let uploadedFiles = [];
+        let newFilesToUpload = [];
+
+        // File upload handling
+        document.getElementById('fileUpload').addEventListener('change', function(e) {
+            newFilesToUpload = Array.from(e.target.files);
+            updateUploadPreview();
+        });
+
+        function updateUploadPreview() {
+            const list = document.getElementById('uploadedFilesList');
+            list.innerHTML = '';
+            
+            newFilesToUpload.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>📄 ${file.name} (${formatFileSize(file.size)})</span>
+                    <span class="remove-file" onclick="removeNewFile(${index})">✕</span>
+                `;
+                list.appendChild(fileItem);
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function removeNewFile(index) {
+            newFilesToUpload.splice(index, 1);
+            updateUploadPreview();
+        }
+
+        function uploadDocuments() {
+            if (newFilesToUpload.length === 0) {
+                alert('Please select files to upload first.');
+                return;
+            }
+            
+            // Simulate file upload
+            newFilesToUpload.forEach(file => {
+                uploadedFiles.push({
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                });
+            });
+            
+            alert(`Successfully uploaded ${newFilesToUpload.length} file(s)!`);
+            newFilesToUpload = [];
+            updateUploadPreview();
+            document.getElementById('fileUpload').value = '';
+        }
+
+        function viewDocument(filename) {
+            alert(`Viewing document: ${filename}\n(In real implementation, this would open the document)`);
+        }
+
+        function removeDocument(filename) {
+            if (confirm(`Are you sure you want to remove ${filename}?`)) {
+                alert(`Document ${filename} removed successfully!`);
+                // In real implementation, remove from backend
+            }
+        }
+
+        function saveEdits() {
+            const formData = {
+                fullName: document.getElementById('editFullName').value,
+                applicantID: document.getElementById('editApplicantID').value,
+                currentStatus: document.getElementById('editCurrentStatus').value,
+                requestedStatus: document.getElementById('editRequestedStatus').value
+            };
+            
+            alert('Applicant information updated successfully!\n\n' + 
+                  `Name: ${formData.fullName}\n` +
+                  `ID: ${formData.applicantID}\n` +
+                  `Current Status: ${formData.currentStatus}\n` +
+                  `Requested Status: ${formData.requestedStatus}`);
+        }
+
+        function saveDraft() {
+            const comments = document.getElementById('comments').value;
+            alert("Review draft saved successfully!");
+            console.log('Draft saved with comments:', comments);
+        }
+        
+        function approveRequest() {
+            if(confirm("Are you sure you want to approve this status change request?")) {
+                alert("Request approved and forwarded to approver!");
+                // In real implementation, would submit to backend
+            }
+        }
+        
+        function returnForCorrections() {
+            const comments = document.getElementById('comments').value.trim();
+            if (!comments) {
+                alert("Please provide comments explaining what needs correction.");
+                return;
+            }
+            
+            if(confirm("Return this request to data entry for corrections?")) {
+                alert("Request returned for corrections with your comments.");
+                // In real implementation, would submit to backend with comments
+            }
+        }
+    </script>
+</body>
+</html>
