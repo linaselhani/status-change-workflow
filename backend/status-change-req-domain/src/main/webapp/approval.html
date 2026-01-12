@@ -48,9 +48,12 @@
         <div class="right-panel">
 
             <!-- post used to send form data from the browser to the servlet  -->
-            <form method ="post" action="approval">
+            <form method ="post" action="ApprovalServlet">
 
-                
+                <label for="formIdInput"><strong>Form ID</strong></label>
+                <input type="text" id="formIdInput" placeholder="Enter Form ID">
+                <button class="btn" type="button" onclick="loadFormData()">Load</button>
+
                 <input type="hidden" name="formId" value="">
 
             <!-- Status Change Request Component  -->
@@ -107,13 +110,16 @@
     </div>
 
     <script>
-        // Load form data when page loads
-        window.addEventListener('DOMContentLoaded', function() {
-            loadFormData();
-        });
+        // Load form data when requested
 
         function loadFormData() {
-            fetch('approval', {
+            const formId = document.getElementById('formIdInput').value.trim();
+            if (!formId) {
+                alert('Please enter a Form ID.');
+                return;
+            }
+
+            fetch(`ApprovalServlet?formId=${encodeURIComponent(formId)}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -148,7 +154,7 @@
                         // First card-body (index 0) is applicant-info, second (index 1) is status change
                         allCardBodies[0].nextElementSibling.parentElement.querySelector('.card-body').innerHTML = `
                             <div style="padding: 10px;">
-                                <strong>Status Change:</strong> ${data.curStatus} → ${data.reqStatus}
+                                <strong>Status Change:</strong> ${data.curStatus} -> ${data.reqStatus}
                             </div>
                         `;
                     }
@@ -172,7 +178,7 @@
             const decision = formData.get('decision');
             
             if (confirm(`Are you sure you want to ${decision === 'approve' ? 'approve' : 'return for review'} this form?`)) {
-                fetch('approval', {
+                fetch('ApprovalServlet', {
                     method: 'POST',
                     body: new URLSearchParams(formData)
                 })

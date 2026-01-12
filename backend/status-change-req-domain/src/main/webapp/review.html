@@ -168,33 +168,39 @@
 <body>
     <div class="container">
         <h1>Review Status Change Request</h1>
+
+        <div class="form-group">
+            <label for="formIdInput">Form ID</label>
+            <input type="text" id="formIdInput" placeholder="Enter Form ID">
+            <button type="button" onclick="loadFormData()" style="margin-top: 10px;">Load</button>
+        </div>
         
         <!-- Application Information (Read-only) -->
         <div class="application-info">
             <h3>Application Summary</h3>
             <div class="info-row">
                 <div class="info-label">Applicant Name:</div>
-                <div class="info-value">John Doe</div>
+                <div class="info-value" id="summaryApplicantName">-</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Applicant ID:</div>
-                <div class="info-value">A123456789</div>
+                <div class="info-value" id="summaryApplicantId">-</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Current Status:</div>
-                <div class="info-value">Tourist Visa (B-2)</div>
+                <div class="info-value" id="summaryCurrentStatus">-</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Requested Status:</div>
-                <div class="info-value">Student Visa (F-1)</div>
+                <div class="info-value" id="summaryRequestedStatus">-</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Date Submitted:</div>
-                <div class="info-value">2024-01-15</div>
+                <div class="info-label">Date of Birth:</div>
+                <div class="info-value" id="summaryDob">-</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Case ID:</div>
-                <div class="info-value">CASE-001</div>
+                <div class="info-label">Return Reason:</div>
+                <div class="info-value" id="summaryReturnReason">-</div>
             </div>
         </div>
 
@@ -204,16 +210,16 @@
             <form id="editForm">
                 <div class="form-group">
                     <label for="editFullName">Full Name:</label>
-                    <input type="text" id="editFullName" name="fullName" value="John Doe">
+                    <input type="text" id="editFullName" name="fullName">
                 </div>
                 <div class="form-group">
                     <label for="editApplicantID">Applicant ID:</label>
-                    <input type="text" id="editApplicantID" name="applicantID" value="A123456789">
+                    <input type="text" id="editApplicantID" name="applicantID">
                 </div>
                 <div class="form-group">
                     <label for="editCurrentStatus">Current Status:</label>
                     <select id="editCurrentStatus" name="currentStatus">
-                        <option value="Tourist Visa (B-2)" selected>Tourist Visa (B-2)</option>
+                        <option value="Tourist Visa (B-2)">Tourist Visa (B-2)</option>
                         <option value="Student Visa (F-1)">Student Visa (F-1)</option>
                         <option value="Work Visa (H-1B)">Work Visa (H-1B)</option>
                         <option value="Permanent Resident">Permanent Resident</option>
@@ -223,7 +229,7 @@
                     <label for="editRequestedStatus">Requested Status:</label>
                     <select id="editRequestedStatus" name="requestedStatus">
                         <option value="Tourist Visa (B-2)">Tourist Visa (B-2)</option>
-                        <option value="Student Visa (F-1)" selected>Student Visa (F-1)</option>
+                        <option value="Student Visa (F-1)">Student Visa (F-1)</option>
                         <option value="Work Visa (H-1B)">Work Visa (H-1B)</option>
                         <option value="Permanent Resident">Permanent Resident</option>
                     </select>
@@ -382,10 +388,7 @@
         }
         
         function approveRequest() {
-            if(confirm("Are you sure you want to approve this status change request?")) {
-                alert("Request approved and forwarded to approver!");
-                // In real implementation, would submit to backend
-            }
+            submitDecision("approve");
         }
         
         function returnForCorrections() {
@@ -395,9 +398,75 @@
                 return;
             }
             
-            if(confirm("Return this request to data entry for corrections?")) {
-                alert("Request returned for corrections with your comments.");
-                // In real implementation, would submit to backend with comments
+            submitDecision("return");
+        }
+
+        function loadFormData() {
+            const formId = document.getElementById('formIdInput').value.trim();
+            if (!formId) {
+                alert("Please enter a Form ID.");
+                return;
+            }
+
+            fetch(`ReviewServlet?formId=${encodeURIComponent(formId)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    const fullName = `${data.firstName} ${data.lastName}`;
+                    document.getElementById('summaryApplicantName').textContent = fullName;
+                    document.getElementById('summaryApplicantId').textContent = data.immId;
+                    document.getElementById('summaryCurrentStatus').textContent = data.currentStatus;
+                    document.getElementById('summaryRequestedStatus').textContent = data.requestedStatus;
+                    document.getElementById('summaryDob').textContent = data.dob;
+                    document.getElementById('summaryReturnReason').textContent = data.returnReason || "-";
+
+                    document.getElementById('editFullName').value = fullName;
+                    document.getElementById('editApplicantID').value = data.immId;
+                    document.getElementById('editCurrentStatus').value = data.currentStatus;
+                    document.getElementById('editRequestedStatus').value = data.requestedStatus;
+                })
+                .catch(error => {
+                    console.error('Error fetching form data:', error);
+                    alert('ERROR OCCURRED. Unable to fetch form data from ReviewServlet');
+                });
+        }
+
+        function submitDecision(decision) {
+            const formId = document.getElementById('formIdInput').value.trim();
+            if (!formId) {
+                alert("Please enter a Form ID.");
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append("formId", formId);
+            params.append("decision", decision);
+            if (decision === "return") {
+                params.append("returnReason", document.getElementById('comments').value.trim());
+            }
+
+            if (confirm(`Are you sure you want to ${decision === "approve" ? "approve" : "return"} this request?`)) {
+                fetch("ReviewServlet", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: params.toString()
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    alert("Request updated successfully.");
+                })
+                .catch(error => {
+                    console.error('Error submitting decision:', error);
+                    alert('ERROR OCCURRED. Unable to submit decision to ReviewServlet');
+                });
             }
         }
     </script>

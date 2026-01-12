@@ -30,6 +30,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class ApprovalServlet extends HttpServlet {
 
+    private static final String APPROVAL_TABLE = "Approval_Forms";
+
     /** doGet's purpose is to only uses the connection to pull info from the database. 
      * request: this variable is essentially what the "client" wants from this code. client: us whenever we interact with the db 
      *      example: client is requesting the first name of a Person object in the database -- this is the request
@@ -43,42 +45,36 @@ public class ApprovalServlet extends HttpServlet {
         
         response.setContentType("application/json");
         PrintWriter out = response.getWriter();
-        
+
+        String formIdParam = request.getParameter("formId");
+        if (formIdParam == null || formIdParam.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.println("{\"error\":\"Missing formId parameter\"}");
+            return;
+        }
+
+        int formId;
         try {
-            Approval approval = new Approval();
-            
-            // Retrieve the next form from the workflow queue
-            if (approval.getFromWF()) {
-                Form form = approval.getForm();
-                
-                if (form != null) {
-                    // Get current status using the Approval helper method
-                    String curStatus = approval.getCurStatusFromDB(form.getImmId());
-                    
-                    // Build JSON response with form details
-                    StringBuilder json = new StringBuilder();
-                    json.append("{");
-                    json.append("\"formId\":").append(form.getId()).append(",");
-                    json.append("\"immId\":").append(form.getImmId()).append(",");
-                    json.append("\"reqStatus\":\"").append(form.getReqStatus()).append("\",");
-                    json.append("\"curStatus\":\"").append(curStatus != null ? curStatus : "Unknown").append("\"");
-                    json.append("}");
-                    
-                    response.setStatus(HttpServletResponse.SC_OK);
-                    out.println(json.toString());
-                    System.out.println("ApprovalServlet.doGet: Successfully retrieved form for approval");
-                } else {
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    out.println("{\"error\":\"Form not found\"}");
-                }
-            } else {
-                response.setStatus(HttpServletResponse.SC_NO_CONTENT);
-                out.println("{\"message\":\"No pending forms in workflow\"}");
+            formId = Integer.parseInt(formIdParam);
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.println("{\"error\":\"formId must be an integer\"}");
+            return;
+        }
+
+        try (Connection conn = App.getConnection()) {
+            if (!isInStage(conn, APPROVAL_TABLE, formId)) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                out.println("{\"error\":\"Form not found in approval\"}");
+                return;
             }
-            
-        } catch (Exception e) {
+
+            String json = loadFormJson(conn, formId);
+            response.setStatus(HttpServletResponse.SC_OK);
+            out.println(json);
+        } catch (SQLException e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            out.println("{\"error\":\"" + e.getMessage() + "\"}");
+            out.println("{\"error\":\"Database error\"}");
             e.printStackTrace();
         }
         
@@ -111,73 +107,40 @@ public class ApprovalServlet extends HttpServlet {
             }
             
             int formId = Integer.parseInt(formIdStr);
-            Approval approval = new Approval();
-            
-            // Create a temporary connection to retrieve the form
-            App app = new App();
-            try (Connection conn = app.getConnection()) {
-                String formSql = "SELECT Imm_id, req_status FROM Forms WHERE Form_id = ?";
-                int immId = -1;
-                String reqStatus = null;
-                
-                try (PreparedStatement stmt = conn.prepareStatement(formSql)) {
-                    stmt.setInt(1, formId);
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            immId = rs.getInt("Imm_id");
-                            reqStatus = rs.getString("req_status");
-                        } else {
-                            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                            out.println("{\"error\":\"Form not found\"}");
-                            return;
-                        }
-                    }
+
+            try (Connection conn = App.getConnection()) {
+                conn.setAutoCommit(false);
+
+                if (!isInStage(conn, APPROVAL_TABLE, formId)) {
+                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    out.println("{\"error\":\"Form not found in approval\"}");
+                    return;
                 }
-                
-                Form form = new Form(reqStatus, immId, conn);
-                form.setId(formId);
-                approval = new Approval(form, false);
-            }
-            
-            boolean success = false;
-            String resultMessage = "";
-            
-            // Process the approval decision
-            if ("approve".equalsIgnoreCase(decision)) {
-                // Approve the form and notify immigration office
-                approval.setNoErrors(true);
-                success = approval.informImmigration();
-                resultMessage = success ? "Form approved and submitted to immigration office" : "Failed to approve form";
-                
-            } else if ("returnReview".equalsIgnoreCase(decision)) {
-                // Return the form back to review with notes
-                approval.setNoErrors(false);
-                success = approval.informReviewer();
-                resultMessage = success ? "Form returned to reviewer" : "Failed to return form to reviewer";
-                
-            } else {
-                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.println("{\"error\":\"Invalid decision. Must be 'approve' or 'returnReview'\"}");
-                return;
-            }
-            
-            // Send response
-            if (success) {
+
+                if ("approve".equalsIgnoreCase(decision)) {
+                    approveForm(conn, formId);
+                } else if ("returnReview".equalsIgnoreCase(decision)) {
+                    if (notes == null || notes.isBlank()) {
+                        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        out.println("{\"error\":\"notes is required when returning\"}");
+                        return;
+                    }
+                    returnToReview(conn, formId, notes);
+                } else {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.println("{\"error\":\"Invalid decision. Must be 'approve' or 'returnReview'\"}");
+                    return;
+                }
+
+                conn.commit();
                 resp.setStatus(HttpServletResponse.SC_OK);
-                StringBuilder response = new StringBuilder();
-                response.append("{");
-                response.append("\"success\":true,");
-                response.append("\"message\":\"").append(resultMessage).append("\",");
-                response.append("\"formId\":").append(formId).append(",");
-                response.append("\"decision\":\"").append(decision).append("\"");
-                response.append("}");
-                out.println(response.toString());
-                System.out.println("ApprovalServlet.doPost: Successfully processed " + decision + " for formId=" + formId);
-            } else {
-                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                out.println("{\"success\":false,\"error\":\"" + resultMessage + "\"}");
+                String message = "approve".equalsIgnoreCase(decision)
+                        ? "Form approved and marked complete."
+                        : "Form returned to review.";
+                out.println("{\"success\":true,\"message\":\"" + message + "\",\"formId\":"
+                        + formId + ",\"decision\":\"" + decision + "\"}");
             }
-            
+
         } catch (NumberFormatException e) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             out.println("{\"error\":\"Invalid formId format. Must be an integer.\"}");
@@ -201,5 +164,115 @@ public class ApprovalServlet extends HttpServlet {
 
     }
 
+    private boolean isInStage(Connection conn, String table, int formId) throws SQLException {
+        String sql = "SELECT 1 FROM " + table + " WHERE Form_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, formId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private String loadFormJson(Connection conn, int formId) throws SQLException {
+        String sql =
+                "SELECT f.Form_id, f.Imm_id, f.req_status, f.return_reason, " +
+                "       p.first_name, p.last_name, p.dob, i.cur_status " +
+                "FROM Forms f " +
+                "JOIN Immigrants i ON f.Imm_id = i.id " +
+                "JOIN Persons p ON p.id = i.id " +
+                "WHERE f.Form_id = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, formId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return "{\"error\":\"Form not found\"}";
+                }
+                return "{"
+                        + "\"formId\":" + rs.getInt("Form_id") + ","
+                        + "\"immId\":" + rs.getInt("Imm_id") + ","
+                        + "\"firstName\":\"" + escapeJson(rs.getString("first_name")) + "\","
+                        + "\"lastName\":\"" + escapeJson(rs.getString("last_name")) + "\","
+                        + "\"dob\":\"" + escapeJson(rs.getString("dob")) + "\","
+                        + "\"currentStatus\":\"" + escapeJson(rs.getString("cur_status")) + "\","
+                        + "\"requestedStatus\":\"" + escapeJson(rs.getString("req_status")) + "\","
+                        + "\"returnReason\":\"" + escapeJson(rs.getString("return_reason")) + "\""
+                        + "}";
+            }
+        }
+    }
+
+    private void approveForm(Connection conn, int formId) throws SQLException {
+        String immSql = "SELECT Imm_id, req_status FROM Forms WHERE Form_id = ?";
+        int immId = 0;
+        String reqStatus = null;
+        try (PreparedStatement stmt = conn.prepareStatement(immSql)) {
+            stmt.setInt(1, formId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    immId = rs.getInt("Imm_id");
+                    reqStatus = rs.getString("req_status");
+                }
+            }
+        }
+
+        if (immId == 0 || reqStatus == null) {
+            throw new SQLException("Form not found for approval");
+        }
+
+        String updateImm = "UPDATE Immigrants SET cur_status = ? WHERE id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(updateImm)) {
+            stmt.setString(1, reqStatus);
+            stmt.setInt(2, immId);
+            stmt.executeUpdate();
+        }
+
+        clearReturnReason(conn, formId);
+        moveForm(conn, APPROVAL_TABLE, "Completed_Forms", formId);
+    }
+
+    private void returnToReview(Connection conn, int formId, String reason) throws SQLException {
+        updateReturnReason(conn, formId, reason);
+        moveForm(conn, APPROVAL_TABLE, "Review_Forms", formId);
+    }
+
+    private void updateReturnReason(Connection conn, int formId, String reason) throws SQLException {
+        String sql = "UPDATE Forms SET return_reason = ? WHERE Form_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, reason);
+            stmt.setInt(2, formId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void clearReturnReason(Connection conn, int formId) throws SQLException {
+        String sql = "UPDATE Forms SET return_reason = NULL WHERE Form_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, formId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void moveForm(Connection conn, String fromTable, String toTable, int formId) throws SQLException {
+        String deleteSql = "DELETE FROM " + fromTable + " WHERE Form_id = ?";
+        String insertSql = "INSERT INTO " + toTable + " (Form_id) VALUES (?)";
+        try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+            deleteStmt.setInt(1, formId);
+            deleteStmt.executeUpdate();
+        }
+        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            insertStmt.setInt(1, formId);
+            insertStmt.executeUpdate();
+        }
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
 
 }

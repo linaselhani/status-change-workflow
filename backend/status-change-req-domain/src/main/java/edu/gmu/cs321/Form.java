@@ -20,9 +20,8 @@ public class Form {
         this.conn = conn;
 
         int check = addToDB();
-        if(check == 0){
-            System.out.println("ERROR OCCURRED. Unable to add Form to DB.");
-            System.exit(-1); 
+        if (check == 0) {
+            throw new IllegalStateException("Unable to add Form to DB.");
         }
 
     }
@@ -87,7 +86,7 @@ public class Form {
                 return this.form_id;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Form insert failed: " + e.getMessage(), e);
         }
         
         return 0;

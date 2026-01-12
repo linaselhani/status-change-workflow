@@ -31,6 +31,9 @@
                 <form id = "external-form"></form>
 
                 <form id="internal-form">
+                    <label for="formId">Form ID (for corrections only):</label>
+                    <input form="external-form" type="text" id="formId" name="formId" placeholder="Leave blank for new form">
+
                     <label for="fName" class="required">First Name:</label>
                     <input form="external-form" type="text" fName = "fName" id = "fName" name = "fName" class = "required-field">
 
@@ -107,6 +110,7 @@
                 const currStatus = document.querySelector("#curStatus").value; 
                 const reqStatus = document.querySelector("#reqStatus").value; 
                 const deps = document.querySelector(".deps-text").value;
+                const formId = document.querySelector("#formId").value.trim();
 
                 const params = new URLSearchParams();
                 params.append("fname", fName);
@@ -114,7 +118,10 @@
                 params.append("dob", dob);
                 params.append("curStatus", currStatus);
                 params.append("reqStatus", reqStatus);
-                params.append("deps", deps);
+                params.append("dependents", deps);
+                if (formId) {
+                    params.append("formId", formId);
+                }
 
                 fetch("DataEntryServlet", {
                     method: "POST",

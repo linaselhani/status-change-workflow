@@ -26,11 +26,11 @@ public class Person {
         this.dob = dob;
         this.conn = conn;
 
-        this.id = addToDB();
-        if(this.id == 0){
-            System.out.println("ERROR OCCURRED. Unable to add Person to DB.");
-            System.exit(-1); 
+        int createdId = addToDB();
+        if (createdId == 0) {
+            throw new IllegalStateException("Unable to add Person to DB.");
         }
+        this.id = createdId;
     }
 
 
@@ -46,14 +46,17 @@ public class Person {
             stmt.setString(1, fName);
             stmt.setString(2, lName);
             stmt.setDate(3, dob);
-            ResultSet res = stmt.executeQuery();
+            try (ResultSet res = stmt.executeQuery()) {
+                if (res.next()) {
+                    System.out.println("SUCCESSFULLY INSERTED PERSON");
+                    return res.getInt("id");
+                }
+            }
 
-            System.out.println("SUCCESSFULLY INSERTED PERSON");
-            return res.getInt(id);
-        }catch (SQLException e){
-            e.printStackTrace();
+        } catch (SQLException e) {
+            throw new IllegalStateException("Person insert failed: " + e.getMessage(), e);
         }
-
+        
         return 0;
     }
 

@@ -28,6 +28,7 @@ CREATE TABLE Forms (
 	Form_id SERIAL PRIMARY KEY,
     Imm_id INT NOT NULL,
     req_status VARCHAR(50) NOT NULL,
+    return_reason TEXT,
     FOREIGN KEY (Imm_id) REFERENCES Immigrants(id)
 );
 

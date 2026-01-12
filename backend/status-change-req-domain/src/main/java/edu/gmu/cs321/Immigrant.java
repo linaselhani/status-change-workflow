@@ -1,11 +1,9 @@
 package edu.gmu.cs321;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Array;
 
 public class Immigrant{
 
@@ -21,9 +19,8 @@ public class Immigrant{
         this.conn = conn;
 
         int check = addToDB();
-        if(check == 0){
-            System.out.println("ERROR OCCURRED. Unable to add Immigrant to DB.");
-            System.exit(-1); 
+        if (check == 0) {
+            throw new IllegalStateException("Unable to add Immigrant to DB.");
         }
         
     }
@@ -33,36 +30,38 @@ public class Immigrant{
      * 
      */
     public int addToDB(){
-        String sql = "INSERT INTO Immigrants (id, cur_status, dependent_ids) VALUES (?, ?, ?)";
+        boolean hasDependentIds = hasDependentIdsColumn();
+        String sql = hasDependentIds
+                ? "INSERT INTO Immigrants (id, cur_status, dependent_ids) VALUES (?, ?, ?)"
+                : "INSERT INTO Immigrants (id, cur_status) VALUES (?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             stmt.setString(2, curStatus);
-
-            Integer[] boxed = null;
-            if (deps != null) {
-                boxed = new Integer[deps.length];
-                for (int i = 0; i < deps.length; i++) {
-                    boxed[i] = deps[i];
-                }
+            if (hasDependentIds) {
+                stmt.setArray(3, toSqlArray(deps));
             }
-
-            java.sql.Array depArray = null;
-            if (boxed != null) {
-                depArray = conn.createArrayOf("INTEGER", boxed);
-            }
-
-            stmt.setArray(3, depArray);
 
             int rows = stmt.executeUpdate();
             if (rows > 0) {
                 System.out.println("SUCCESSFULLY INSERTED IMMIGRANT");
-                return id;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
 
-        return 0;
+            if (!hasDependentIds && deps != null && deps.length > 0) {
+                String depSql = "INSERT INTO Deps_of_Imms (Imm_id, Dep_id) VALUES (?, ?)";
+                try (PreparedStatement depStmt = conn.prepareStatement(depSql)) {
+                    for (int depId : deps) {
+                        depStmt.setInt(1, id);
+                        depStmt.setInt(2, depId);
+                        depStmt.addBatch();
+                    }
+                    depStmt.executeBatch();
+                }
+            }
+
+            return id;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Immigrant insert failed: " + e.getMessage(), e);
+        }
     }
 
 
@@ -106,30 +105,44 @@ public class Immigrant{
 
    
     public void updateDeps(int id, int[] newDeps) {
-        String sql = "UPDATE Immigrants SET dependent_ids = ? WHERE id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            Integer[] boxed = null;
-            if (newDeps != null) {
-                boxed = new Integer[newDeps.length];
-                for (int i = 0; i < newDeps.length; i++) {
-                    boxed[i] = newDeps[i];
-                }
+        if (hasDependentIdsColumn()) {
+            String sql = "UPDATE Immigrants SET dependent_ids = ? WHERE id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setArray(1, toSqlArray(newDeps));
+                stmt.setInt(2, id);
+                stmt.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return;
             }
-
-            Array depArray = null;
-            if (boxed != null) {
-                depArray = conn.createArrayOf("INTEGER", boxed);
-            }
-
-            stmt.setArray(1, depArray);
-            stmt.setInt(2, id);
-
-            stmt.executeUpdate();
             this.deps = newDeps;
+            return;
+        }
+
+        String deleteSql = "DELETE FROM Deps_of_Imms WHERE Imm_id = ?";
+        String insertSql = "INSERT INTO Deps_of_Imms (Imm_id, Dep_id) VALUES (?, ?)";
+        try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+            deleteStmt.setInt(1, id);
+            deleteStmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+            return;
         }
+
+        if (newDeps != null && newDeps.length > 0) {
+            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                for (int depId : newDeps) {
+                    insertStmt.setInt(1, id);
+                    insertStmt.setInt(2, depId);
+                    insertStmt.addBatch();
+                }
+                insertStmt.executeBatch();
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        this.deps = newDeps;
     }
     
     // for only 1 dependent
@@ -143,5 +156,26 @@ public class Immigrant{
     public void updateImmigrant(int id, String newStatus, int[] newDeps) {
         updateCurStatus(id, newStatus);
         updateDeps(id, newDeps);
+    }
+
+    private boolean hasDependentIdsColumn() {
+        String sql = "SELECT 1 FROM information_schema.columns WHERE table_name = 'immigrants' AND column_name = 'dependent_ids'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            return rs.next();
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private java.sql.Array toSqlArray(int[] values) throws SQLException {
+        if (values == null || values.length == 0) {
+            return null;
+        }
+        Integer[] boxed = new Integer[values.length];
+        for (int i = 0; i < values.length; i++) {
+            boxed[i] = values[i];
+        }
+        return conn.createArrayOf("INTEGER", boxed);
     }
 }
